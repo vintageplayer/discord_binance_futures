@@ -60,7 +60,7 @@ class BinanceController():
 		print(f'Leverage Updation Result: {result_response}')
 		return result_response
 
-	async def place_futures_on_market_price(self, symbol, amount):
+	async def place_futures_on_market_price(self, symbol, amount, side='BUY'):
 		# code to place order
 		print(f'Placing New Market Order for {symbol}. Amount: {amount} ')
 		symbol_info = self.futures_exchange_info.get(symbol, {'precision': 0})
@@ -69,12 +69,13 @@ class BinanceController():
 			response = await self.client.futures_symbol_ticker(symbol=symbol)
 			price = float(response['price'])
 			quantity = round((amount/price), precision)
-			response = await self.client.futures_create_order(symbol=symbol, side='BUY', type='MARKET', quantity=quantity, newOrderRespType='RESULT')
+			response = await self.client.futures_create_order(symbol=symbol, side=side, type='MARKET', quantity=quantity, newOrderRespType='RESULT')
 			order_status = response['status']
 			avg_price = response['avgPrice']
 			number_of_coins = response['cumQty']
 			USDT_used = response['cumQuote']
-			response = f'Order Status: {order_status}. Average Price: {avg_price}. Qty: {number_of_coins}. USDT Transferred: {USDT_used}'
+			side = response['side']
+			response = f'Order Type: {side}. Order Status: {order_status}. Average Price: {avg_price}. Qty: {number_of_coins}. USDT Transferred: {USDT_used}'
 		except BinanceAPIException as e:
 			api_error_message = str(e)
 			response = api_error_message

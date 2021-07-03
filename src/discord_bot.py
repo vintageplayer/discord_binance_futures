@@ -25,7 +25,7 @@ Automate market orders on futures using Binance API.
 
 async def handle_bot_command(message):
 	parts = message.split(' ')
-	if len(parts) > 2:
+	if len(parts) > 3:
 		return BOT_HELP_MESSAGE
 
 	response = None
@@ -44,10 +44,16 @@ async def handle_bot_command(message):
 		'h': 1500
 	}
 
+	side = 'BUY'
+	if parts[0] == 's' and len(parts) == 3:
+		command = parts[1].lower()
+		side = 'SELL'
+
 	amount = amount_map.get(command, None)
-	if amount and len(parts) == 2:
-		coin_symbol = f'{parts[1].upper()}USDT'
-		response = await binance_controller.place_futures_on_market_price(coin_symbol, amount)
+
+	if amount and len(parts) >= 2:
+		coin_symbol = f'{parts[-1].upper()}USDT'
+		response = await binance_controller.place_futures_on_market_price(coin_symbol, amount, side)
 		return response
 	
 	return BOT_HELP_MESSAGE
