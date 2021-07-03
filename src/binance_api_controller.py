@@ -60,15 +60,18 @@ class BinanceController():
 		print(f'Leverage Updation Result: {result_response}')
 		return result_response
 
-	async def place_futures_on_market_price(self, symbol, amount, side='BUY'):
+	async def place_futures_on_market_price(self, symbol, amount, side='BUY', convert_to_qty=True):
 		# code to place order
-		print(f'Placing New Market Order for {symbol}. Amount: {amount} ')
+		print(f'Placing New Market Order for {symbol}. Amount: {amount}. Side: {side}.')
 		symbol_info = self.futures_exchange_info.get(symbol, {'precision': 0})
 		precision = symbol_info['precision']
 		try:
-			response = await self.client.futures_symbol_ticker(symbol=symbol)
-			price = float(response['price'])
-			quantity = round((amount/price), precision)
+			if convert_to_qty:
+				response = await self.client.futures_symbol_ticker(symbol=symbol)
+				price = float(response['price'])
+				quantity = round((amount/price), precision)
+			else:
+				quantity = float(amount)
 			response = await self.client.futures_create_order(symbol=symbol, side=side, type='MARKET', quantity=quantity, newOrderRespType='RESULT')
 			order_status = response['status']
 			avg_price = response['avgPrice']
@@ -78,8 +81,28 @@ class BinanceController():
 			response = f'Order Type: {side}. Order Status: {order_status}. Average Price: {avg_price}. Qty: {number_of_coins}. USDT Transferred: {USDT_used}'
 		except BinanceAPIException as e:
 			api_error_message = str(e)
-			response = api_error_message
+			response = f'Binance API Error: {api_error_message}'
 		print(f'Order Request Response: {response}')
+		return response
+
+	async def close_futures_on_market_price(self, symbol):
+		print(f'Checking for open position for {symbol}.')
+		try:
+			account_info = await self.client.futures_account()
+			symbol_positions = [ position for position in account_info['positions'] if float(position['positionAmt']) != 0 and position['symbol'] == symbol]
+			if len(symbol_positions) <= 0:
+				response = f'No position found for symbol: {symbol}.'
+			else:
+				quantity = float(symbol_positions[0]['positionAmt'])
+				side = 'BUY' if quantity < 0 else 'SELL'
+				quantity = abs(quantity)
+				response = 'Closing Position: ' + await self.place_futures_on_market_price(symbol, quantity, side, False)
+		except BinanceAPIException as e:
+			api_error_message = str(e)
+			response = f'Binance API Error: {api_error_message}'
+		except Exception as e:
+			response = str(e)
+		print(f'Close Position Response: {response}')
 		return response
 
 	async def close_connection(self):

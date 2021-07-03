@@ -16,11 +16,16 @@ with open(CONF_FILE) as inFile:
 BOT_HELP_MESSAGE = """
 Automate market orders on futures using Binance API.
 1. Set the leverage to a number: **!leverage n** (for eg: **!leverage 10**)
-2. Place a market order for a future pair, for one the following specific amounts:
+2. Place a market order to buy a future pair, for one the following specific amounts:
 	a. $500 - **i <symbol>** eg: **i eth**
 	b. $1000 - **m <symbol>** eg: **m eth**
 	c. $1500 - **h <symbol>** eg: **h eth**
-3. Refresh Symbols and their Lot Sizes: **!refresh**
+3. Place a market order to sell a future pair, for one the following specific amounts:
+	a. $500 - **s i <symbol>** eg: **s i eth**
+	b. $1000 - **s m <symbol>** eg: **s m eth**
+	c. $1500 - **s h <symbol>** eg: **s h eth**
+4. Close open positions for a symbol: **c <symbol>** (for eg: **c eth**)
+5. Refresh Symbols and their Lot Sizes: **!refresh**
 """
 
 async def handle_bot_command(message):
@@ -36,6 +41,11 @@ async def handle_bot_command(message):
 	if command == '!leverage' and len(parts)==2:
 		new_leverage = int(parts[1])
 		response = await binance_controller.set_leverage(new_leverage)
+		return response
+
+	if command == 'c' and len(parts)==2:
+		coin_symbol = f'{parts[-1].upper()}USDT'
+		response = await binance_controller.close_futures_on_market_price(coin_symbol)
 		return response
 
 	amount_map = {
@@ -77,8 +87,8 @@ async def on_message(message):
 	if message.author == client.user:
 		return
 
-	reponse = await handle_bot_command(message.content)
-	await message.channel.send(reponse)
+	response = await handle_bot_command(message.content)
+	await message.channel.send(response)
 
 if __name__ == '__main__':
 	client.run(conf['discord_token'])
